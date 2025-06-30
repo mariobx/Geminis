@@ -2,7 +2,7 @@ import sys
 import os
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from gpt import gem_request as atherisai
+from llm import gem_request as atherisai
 from fetch import fetch_docs as docs
 from sandbox import sandbox
 from datetime import datetime
