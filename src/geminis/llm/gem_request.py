@@ -18,7 +18,7 @@ def extract_code_blocks(text):
     
 def get_api() -> str:
     try:
-        return str(open(os.path.join(os.getcwd(), 'geminis/gpt/api.txt'), 'r').read())
+        return str(open(os.path.join(os.getcwd(), 'geminis/llm/api.txt'), 'r').read())
     except FileNotFoundError:
         print("Error: api.txt not found. Please create this file and paste your API key in it.")
         sys.exit(1)
