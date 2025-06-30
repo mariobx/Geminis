@@ -1,2 +1,2 @@
 # atheris-gemini-fuzzer
-fuzzinf functions with ai
+fuzzing functions with ai
