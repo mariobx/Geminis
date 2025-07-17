@@ -1,12 +1,10 @@
-import sys
-from pathlib import Path
+from src.paths import *
+from src.geminis.fetch import fetch_docs as docs
 from google import genai
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 import time
 import os
 import re
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-from fetch import fetch_docs as docs
 
 def extract_code_blocks(text):
     # Match content inside triple backticks, capture language tag but ignore it
@@ -18,7 +16,7 @@ def extract_code_blocks(text):
     
 def get_api() -> str:
     try:
-        return str(open(os.path.join(os.getcwd(), 'llm/api.txt'), 'r').read())
+        return str(open(os.path.join(LLM_DIR, 'api.txt'), 'r').read())
     except FileNotFoundError:
         print("Error: api.txt not found. Please create this file and paste your API key in it.")
         sys.exit(1)

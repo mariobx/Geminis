@@ -1,7 +1,7 @@
 import os
 import ast
-from pathlib import Path
 from typing import List
+from src.paths import *
 
 def is_virtualenv_dir(path):
     """

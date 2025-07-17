@@ -1,12 +1,9 @@
-import sys
-from pathlib import Path
+from src.paths import *
 import subprocess
 import tempfile
 import os
 from textwrap import dedent
 import venv
-
-
 
 def sandbox_venv(code: str, save_path = os.getcwd()) -> subprocess.CompletedProcess:
     """
