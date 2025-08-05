@@ -67,7 +67,8 @@ def main():
                         help="Enable debug mode to print internal states.")
     parser.add_argument("--api-key", type=str, required=True,
                         help="API key string or path to file containing it. This can be the api key itself, a path to the api as a single line txt file, or setting the enviorment variable GEMINI_API_KEY with bash: export GEMINI_API_KEY=<YOUR_API_KEY_HERE>")
-
+    parser.add_argument("--smell", action="store_true",
+                        help="Enable code smell to judge programatically if code should be fuzzed.")
 
     args = parser.parse_args()
 
@@ -81,7 +82,8 @@ def main():
             mode=args.mode,
             prompt_yaml_path=args.prompts_path,
             debug=args.debug,
-            api=api_key
+            api=api_key,
+            smell=args.smell
         )
     except Exception as e:
         import traceback

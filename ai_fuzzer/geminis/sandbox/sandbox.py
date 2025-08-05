@@ -39,7 +39,6 @@ def save_to_file(text=None, path=None, debug=False):
     with open(os.path.join(path, 'gemini_created_code.py'), 'w') as f:
         f.write(text)
         if debug:
-            print(f"DEBUG: Saving code to {full_path}")
             print(f"DEBUG: Text length: {len(text) if text else 0}")
             
 def run_file(filename=None):
