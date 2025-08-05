@@ -4,7 +4,6 @@ import time
 from pathlib import Path
 from typing import Optional, Tuple
 import google.genai as genai
-import ssl, httpx
 import yaml
 from google.genai.types import GenerateContentConfig
 from ai_fuzzer.geminis.fetch import fetch_docs
