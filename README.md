@@ -1,14 +1,6 @@
 
-## Geminis: AI-Driven Python Fuzzing CLI
-
-# Description:
+## Geminis:
 This project creates a LLM-assisted Python fuzzing harness generator designed to leverage large language models like Gemini to automatically build fuzzing harnesses for target Python functions. It uses Google’s Atheris fuzzing engine to dynamically generate and test code, with the aim of uncovering bugs or vulnerabilities in software.
-  
-# Features:
-  • AST parsing: Extract functions or classes from your code.
-  • LLM harness gen: Embed code into prompts.yaml templates and call Gemini.
-  • Optional smell filter: Skip high-maintainability code via Radon.
-  • Isolated runs: Create venvs, execute harnesses, capture logs in timestamped folders.
 
 # Usage:
   geminis \
@@ -22,8 +14,8 @@ This project creates a LLM-assisted Python fuzzing harness generator designed to
     [--smell]
 
 # Workflow:
-  1. Load API key (env or file), verify model.
+  1. Load API key (enviorment variable, file, raw string), verify model.
   2. Discover .py files; parse target snippets.
-  3. (Optional) Filter by maintainability index.
+  3. (Optional) Filter by maintainability index by radon.
   4. Build prompt with Atheris docs + code; send to Gemini.
-  5. Create venv, write harness, run tests, save outputs.
+  5. Creates python3.11 sandbox venv, writes harness, runs tests, cleans up temp venv, saves outputs.
