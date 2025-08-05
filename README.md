@@ -8,10 +8,10 @@ This project creates a LLM-assisted Python fuzzing harness generator designed to
     --output-dir /path/to/logs \
     --prompts-path /path/to/prompts.yaml \
     --api-key /path/to/api.txt \
-    --prompt base \
-    --mode functions \
-    [--debug] \
-    [--smell]
+    --prompt prompt-id (base if using given yaml prompts) \
+    --mode functions(classes) \
+    [--debug] Outputs detailed debug statements \
+    [--smell] Uses optional radon code smell using the maintainability index \
 
 # Workflow:
   1. Load API key (enviorment variable, file, raw string), verify model.
