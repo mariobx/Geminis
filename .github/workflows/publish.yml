@@ -2,9 +2,10 @@ name: "Release: tag, build, publish"
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
-      - "pyproject.toml"
+      - pyproject.toml
 
 permissions:
   contents: write
@@ -31,24 +32,14 @@ jobs:
       - name: Read current version
         id: readver
         run: |
-          VERSION=$(python - <<'PY'
-import tomllib, pathlib
-data = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
-print(data['project']['version'])
-PY
-)
+          VERSION=$(python -c "import tomllib, pathlib; d=tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8')); print(d['project']['version'])")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Read previous version
         id: prevver
         run: |
           if git show HEAD^:pyproject.toml >/dev/null 2>&1; then
-            PREV=$(git show HEAD^:pyproject.toml | python - <<'PY'
-import tomllib, sys, io
-data = tomllib.load(io.StringIO(sys.stdin.read()))
-print(data['project']['version'])
-PY
-)
+            PREV=$(git show HEAD^:pyproject.toml | python -c "import sys, tomllib, io; print(tomllib.load(io.StringIO(sys.stdin.read()))['project']['version'])")
             echo "prev=$PREV" >> "$GITHUB_OUTPUT"
           else
             echo "prev=" >> "$GITHUB_OUTPUT"
