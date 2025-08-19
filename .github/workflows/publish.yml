@@ -1,4 +1,4 @@
-name: Release: tag, build, publish
+name: "Release: tag, build, publish"
 
 on:
   push:
