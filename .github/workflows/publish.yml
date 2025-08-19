@@ -39,7 +39,7 @@ jobs:
         id: prevver
         run: |
           if git show HEAD^:pyproject.toml >/dev/null 2>&1; then
-            PREV=$(git show HEAD^:pyproject.toml | python -c "import sys, tomllib, io; print(tomllib.load(io.StringIO(sys.stdin.read()))['project']['version'])")
+            PREV=$(git show HEAD^:pyproject.toml | python -c "import sys, tomllib; print(tomllib.loads(sys.stdin.read())['project']['version'])")
             echo "prev=$PREV" >> "$GITHUB_OUTPUT"
           else
             echo "prev=" >> "$GITHUB_OUTPUT"
