@@ -50,8 +50,10 @@ def get_response(prompt_id: str, target_func: str, yaml_path: Path, debug: False
                 contents=full_prompt,
                 config=GenerateContentConfig(response_modalities=['TEXT'], temperature=temperature)
             )
-            log(f"Received response with text length: {len(response.text)}", debug)
-            return response.text
+            fallback_txt = "## an error occurred with LLM response\nexit()"
+            txt = (getattr(response, "text", None) or fallback_txt)
+            log(f"Received response with text length: {len(txt)}", debug) if txt != fallback_txt else log("A response error occurred (empty/missing text); falling back to the python literal 'exit()'", debug)
+            return txt
         except genai.errors.ServerError as e:
             print(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(2)
