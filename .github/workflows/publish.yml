@@ -7,11 +7,14 @@ on:
       - "pyproject.toml"
 
 permissions:
-  contents: write   # to push the tag
-  id-token: write   # REQUIRED for PyPI Trusted Publishing
+  contents: write
+  id-token: write
 
 jobs:
   tag-build-publish:
+    environment:
+      name: pypi
+      url: https://pypi.org/p/Geminis
     runs-on: ubuntu-latest
 
     steps:
@@ -28,24 +31,25 @@ jobs:
       - name: Read current version
         id: readver
         run: |
-          echo "version=$(python - <<'PY'
+          VERSION=$(python - <<'PY'
 import tomllib, pathlib
 data = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
 print(data['project']['version'])
 PY
-          )" >> "$GITHUB_OUTPUT"
+)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Read previous version
         id: prevver
         run: |
           if git show HEAD^:pyproject.toml >/dev/null 2>&1; then
-            echo "prev=$(git show HEAD^:pyproject.toml | python - <<'PY'
-import tomllib, sys
-import io
+            PREV=$(git show HEAD^:pyproject.toml | python - <<'PY'
+import tomllib, sys, io
 data = tomllib.load(io.StringIO(sys.stdin.read()))
 print(data['project']['version'])
 PY
-            )" >> "$GITHUB_OUTPUT"
+)
+            echo "prev=$PREV" >> "$GITHUB_OUTPUT"
           else
             echo "prev=" >> "$GITHUB_OUTPUT"
           fi

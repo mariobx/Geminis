@@ -4,6 +4,7 @@ import tempfile
 import os
 from textwrap import dedent
 import venv
+from ai_fuzzer.geminis.logger.logs import log
 
 def sandbox_venv(code: str, save_path = os.getcwd(), debug=False) -> subprocess.CompletedProcess:
     """
@@ -15,7 +16,7 @@ def sandbox_venv(code: str, save_path = os.getcwd(), debug=False) -> subprocess.
     - Assumes Python 3.11 is available at /usr/bin/python3.11.
     - This is not a secure sandbox; it isolates site-packages only.
     """
-    print("DEBUG: starting python3.11 venv to run code")
+    log("starting python3.11 venv to run code", debug)
     import shutil
     python_exe = shutil.which("python3.11")
     if not python_exe:
@@ -32,21 +33,19 @@ def sandbox_venv(code: str, save_path = os.getcwd(), debug=False) -> subprocess.
         cwd=save_path
     )
     workdir.cleanup()
-    print("DEBUG: closing python3.11 venv to run code")
+    log("closing python3.11 venv to run code", debug)
     return proc
 
 def save_to_file(text=None, path=None, debug=False):
     with open(os.path.join(path, 'gemini_created_code.py'), 'w') as f:
         f.write(text)
-        if debug:
-            print(f"DEBUG: Text length: {len(text) if text else 0}")
-            
+        log(f"Text length: {len(text) if text else 0}", debug)
+
 def run_file(filename=None):
     try:
         result = subprocess.run(
-            [sys.executable, filename],                
+            [sys.executable, filename],
         )
         print("Output:", result.stdout)
     except subprocess.CalledProcessError as e:
         print("Error:", e.stderr)
-

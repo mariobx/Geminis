@@ -1,5 +1,6 @@
 import requests
 import re
+from ai_fuzzer.geminis.logger.logs import log
 
 def fetch_atheris_readme(debug=False):
     url = "https://raw.githubusercontent.com/google/atheris/master/README.md"
@@ -21,7 +22,7 @@ def fetch_atheris_readme(debug=False):
 
     ==== END OF ATHERIS DOCUMENTATION ====
     """
-    print("DEBUG: fetched atheris read me")
+    log("fetched atheris read me", debug)
     return formatted_content
 
 def fetch_atheris_hooking_docs(debug=False):
@@ -45,5 +46,5 @@ def fetch_atheris_hooking_docs(debug=False):
     ==== END OF ATHERIS' HOOKING DOCUMENTATION ====
     """
 
-    print("DEBUG: fetched atheris hooking documentation")
+    log("fetched atheris hooking documentation", debug)
     return formatted_content

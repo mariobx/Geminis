@@ -1,4 +1,5 @@
 from radon.metrics import mi_visit
+from ai_fuzzer.geminis.logger.logs import log
 
 def code_smells(python_code: str, threshold: float = 65.0, debug: bool = False) -> bool:
     """
@@ -11,10 +12,7 @@ def code_smells(python_code: str, threshold: float = 65.0, debug: bool = False) 
 
     decision = results < threshold
 
-    if debug:
-        action = "will fuzz" if decision else "will skip fuzzing"
-        print(
-            f"DEBUG: MI score = {results} (threshold = {threshold}) → {action}"
-        )
+    action = "will fuzz" if decision else "will skip fuzzing"
+    log(f"MI score = {results} (threshold = {threshold}) → {action}", debug)
 
     return decision
