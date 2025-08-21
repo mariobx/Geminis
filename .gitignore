@@ -1,0 +1,8 @@
+__pycache__/
+api.txt
+code_analysis.log
+output_files/
+dist/
+Geminis.egg-info/
+venv/
+.git
