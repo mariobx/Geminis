@@ -91,9 +91,9 @@ def run(
     log(f"run() called with mode={mode}, source_dir={source_dir}, output_dir={output_dir}, prompt_id={prompt_id}, prompt_yaml_path={prompt_yaml_path}", debug)
 
     if mode == "functions":
-        code_snippets = retrieve_function_candidates(source_dir, prompt_id, prompt_yaml_path, api=api, debug=debug, smell=smell)
+        code_snippets = retrieve_function_candidates(source_dir, prompt_id, prompt_yaml_path, api=api, output_dir=output_dir, debug=debug, smell=smell)
     elif mode == "classes":
-        code_snippets = retrieve_class_candidates(source_dir, prompt_id, prompt_yaml_path, api=api, debug=debug, smell=smell)
+        code_snippets = retrieve_class_candidates(source_dir, prompt_id, prompt_yaml_path, api=api, output_dir=output_dir, debug=debug, smell=smell)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
