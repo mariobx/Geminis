@@ -10,12 +10,12 @@ from ai_fuzzer.geminis.logger.logs import log
 
 def on_crash(output_dir: Path, data: list, debug: bool = False) -> None:
     try:
-        log(f"Crash occurred, output directory: {output_dir}", debug=debug)
+        log(f"Crash occurred, output directory: {output_dir}", debug)
         with open(output_dir / "crash_report.txt", "w", encoding="utf-8") as f:
             for i, contents in enumerate(data):
                 f.write(f"HARNESS {i+1}\n\n----\n\n{contents}\n\n----\n\n")
     except (OSError, IOError, Exception) as e:
-        log(f"Failed to write crash report: {e}", debug=debug)
+        log(f"Failed to write crash report: {e}", debug)
 
 def make_run_dir(base: Path, debug=False) -> Path:
     timestamp = datetime.now().strftime("%m-%d-%y_%I-%M-%S%p").lower()
