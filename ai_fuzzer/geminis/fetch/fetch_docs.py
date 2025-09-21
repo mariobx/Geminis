@@ -1,28 +1,41 @@
 import re
-import time
+import backoff
 import requests
 from ai_fuzzer.geminis.logger.logs import log
 
 cache = {}
 
-def fetch_atheris_readme(debug=False):
+RETRYABLE_EXCEPTIONS = (
+    requests.exceptions.RequestException,
+    requests.exceptions.Timeout,
+    requests.exceptions.ConnectionError
+)
+
+def is_bad_response(docs: str) -> bool:
+    """Return True when the fetched documentation text is empty or None."""
+    if not docs:
+        # The response is None or "", which is considered a failure.
+        log("A response error occurred (empty/missing text). Retrying...", True)
+        return True
+
+    return False #success
+
+
+@backoff.on_predicate(backoff.expo, predicate=is_bad_response, max_tries=5, jitter=backoff.full_jitter)
+@backoff.on_exception(backoff.expo, RETRYABLE_EXCEPTIONS, max_tries=5, jitter=backoff.full_jitter)
+def fetch_atheris_readme(debug: bool = False) -> str:
+    """Fetch and return Google's Atheris README as cleaned plain text.
+
+    The returned string is cached to avoid repeated network calls.
+    """
+
     if "readme" in cache:
         return cache["readme"]
 
     url = "https://raw.githubusercontent.com/google/atheris/master/README.md"
 
-    for attempt in range(5):
-        try:
-            response = requests.get(url, timeout=8)
-            response.raise_for_status()
-            break
-        except (requests.exceptions.RequestException,
-                requests.exceptions.Timeout,
-                requests.exceptions.ConnectionError) as e:
-            log(f"Attempt {attempt+1} failed fetching README: {e}", debug)
-            time.sleep(2)
-    else:
-        raise Exception("Failed to fetch README after retries")
+    response = requests.get(url, timeout=8)
+    response.raise_for_status()
 
     content = response.text
     content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
@@ -42,24 +55,21 @@ This is the official README documentation for Google's Atheris fuzzing framework
     return formatted
 
 
+@backoff.on_exception(backoff.expo, RETRYABLE_EXCEPTIONS, max_tries=5, jitter=backoff.full_jitter)
+@backoff.on_predicate(backoff.expo, predicate=is_bad_response, max_tries=5, jitter=backoff.full_jitter)
 def fetch_atheris_hooking_docs(debug=False):
+    """Fetch and return Google's Atheris hooking docs as cleaned plain text.
+
+    The returned string is cached to avoid repeated network calls.
+    """
+
     if "hooking" in cache:
         return cache["hooking"]
 
     url = "https://raw.githubusercontent.com/google/atheris/refs/heads/master/hooking.md"
-
-    for attempt in range(5):
-        try:
-            response = requests.get(url, timeout=8)
-            response.raise_for_status()
-            break
-        except (requests.exceptions.RequestException,
-                requests.exceptions.Timeout,
-                requests.exceptions.ConnectionError) as e:
-            log(f"Attempt {attempt+1} failed fetching hooking docs: {e}", debug)
-            time.sleep(2)
-    else:
-        raise Exception("Failed to fetch hooking docs after retries")
+    
+    response = requests.get(url, timeout=8)
+    response.raise_for_status()
 
     content = response.text
     content = re.sub(r'!\[.*?\]\(.*?\)', '', content)

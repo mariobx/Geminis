@@ -32,13 +32,13 @@ def get_python_file_paths(directory_path, debug=False):
                 log(f"Found Python file: {full_path} (type: {type(full_path)})", debug)
     return python_files
 
-def extract_functions(path: str | Path, debug=False) -> List[str]:
+def extract_functions(path: str | Path, debug=False) -> dict[str, str]:
     """
-    Parses a Python file and extracts all functions as source code strings.
+    Parses a Python file and extracts all functions as a dictionary mapping function names to source code strings.
     """
     if not isinstance(path, (str, Path)) or not Path(path).is_file():
         log(f"Invalid path or not a file: {path} (type: {type(path)})", debug)
-        return []
+        return {}
 
     source_code = Path(path).read_text(encoding="utf-8")
     tree = ast.parse(source_code, filename=str(path))
@@ -46,24 +46,24 @@ def extract_functions(path: str | Path, debug=False) -> List[str]:
     log(f"Parsed AST for file: {path} (length of source: {len(source_code)})", debug)
 
     functions = [
-        ast.get_source_segment(source_code, node)
+        (node.name, ast.get_source_segment(source_code, node))
         for node in ast.walk(tree)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     ]
 
-    result = [func for func in functions if func is not None]
+    result = {func_name: func_body for func_name, func_body in functions if func_name and func_body is not None}
 
     log(f"Extracted {len(result)} function(s) from {path}", debug)
 
     return result
 
-def extract_classes(path: str | Path, debug=False) -> List[str]:
+def extract_classes(path: str | Path, debug=False)  -> dict[str, str]:
     """
     Parses a Python file and extracts all classes as source code strings.
     """
     if not isinstance(path, (str, Path)) or not Path(path).is_file():
         log(f"Invalid path or not a file: {path} (type: {type(path)})", debug)
-        return []
+        return {}
 
     source_code = Path(path).read_text(encoding="utf-8")
     tree = ast.parse(source_code, filename=str(path))
@@ -71,12 +71,12 @@ def extract_classes(path: str | Path, debug=False) -> List[str]:
     log(f"Parsed AST for file: {path} (length of source: {len(source_code)})", debug)
 
     classes = [
-        ast.get_source_segment(source_code, node)
+        (node.name, ast.get_source_segment(source_code, node))
         for node in ast.walk(tree)
         if isinstance(node, ast.ClassDef)
     ]
 
-    result = [cls for cls in classes if cls is not None]
+    result = {cls_name: cls_body for cls_name, cls_body in classes if cls_name and cls_body is not None}
 
     log(f"Extracted {len(result)} class(es) from {path}", debug)
 

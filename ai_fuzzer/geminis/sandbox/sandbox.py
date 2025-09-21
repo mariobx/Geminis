@@ -6,46 +6,11 @@ from textwrap import dedent
 import venv
 from ai_fuzzer.geminis.logger.logs import log
 
-def sandbox_venv(code: str, save_path = os.getcwd(), debug=False) -> subprocess.CompletedProcess:
-    """
-    Always creates a Python 3.11 virtual environment, runs the supplied Python `code` inside it,
-    and returns the `CompletedProcess` result (stdout/stderr captured).
+def save_to_file(name=None, text=None, path=None, debug=False):
+    """Save provided text to a timestamped Atheris harness file in path."""
 
-    Notes
-    -----
-    - Assumes Python 3.11 is available at /usr/bin/python3.11.
-    - This is not a secure sandbox; it isolates site-packages only.
-    """
-    log("starting python3.11 venv to run code", debug)
-    import shutil
-    python_exe = shutil.which("python3.11")
-    if not python_exe:
-        raise RuntimeError("Python 3.11 not found. Please install it at /usr/bin/python3.11")
-    workdir = tempfile.TemporaryDirectory()
-    env_dir = Path(workdir.name) / "venv"
-    subprocess.run([python_exe, "-m", "venv", str(env_dir)], check=True)
-    env_python = env_dir / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    script_path = env_dir / "sandbox_exec.py"
-    script_path.write_text(dedent(code).lstrip())
-    proc = subprocess.run(
-        [str(env_python), str(script_path)],
-        check=False,
-        cwd=save_path
-    )
-    workdir.cleanup()
-    log("closing python3.11 venv to run code", debug)
-    return proc
-
-def save_to_file(text=None, path=None, debug=False):
-    with open(os.path.join(path, 'gemini_created_code.py'), 'w') as f:
-        f.write(text)
+    if path is None:
+        raise ValueError("The 'path' argument must not be None.")
+    with open(os.path.join(path, f'atheris_harness_for_(({name})).py'), 'w') as f:
+        f.write(text if text is not None else "")
         log(f"Text length: {len(text) if text else 0}", debug)
-
-def run_file(filename=None):
-    try:
-        result = subprocess.run(
-            [sys.executable, filename],
-        )
-        print("Output:", result.stdout)
-    except subprocess.CalledProcessError as e:
-        print("Error:", e.stderr)

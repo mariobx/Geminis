@@ -6,44 +6,70 @@ import requests
 from ai_fuzzer.geminis.logger.logs import log, init_logger
 
 
-def resolve_api_key(arg_val: str | None, debug: bool = False) -> str:
-    key: str = ''
-    env_key = os.getenv("GENAI_API_KEY")
-    if env_key:
-        key = env_key.strip()
-        log(f"Using API key from environment variable", debug)
-    elif arg_val:
-        maybe_path = Path(arg_val)
-        if maybe_path.is_file():
-            try:
-                with maybe_path.open("r", encoding="utf-8") as f:
-                    key = f.read().strip()
-                    log(f"API key loaded from file", debug)
-            except Exception as e:
-                print(f"Error reading API key file: {e}")
-        else:
-            key = arg_val.strip()
-            log(f"Using API key passed as literal", debug)
-    else:
-        log("No API key provided. Use --api-key or set GENAI_API_KEY.", debug)
-        exit()
+def get_key_from_env(debug: bool = False) -> str | None:
+    """Return an API key from the GENAI_API_KEY environment variable if present."""
+    if env_key := os.getenv("GENAI_API_KEY"):
+        log("Using API key from environment variable", debug)
+        return env_key.strip()
+    return None
+
+def get_key_from_file(path_str: str, debug: bool = False) -> str | None:
+    """Read and return an API key from a text file, or None on error."""
+    try:
+        content = Path(path_str).read_text(encoding="utf-8")
+        log(f"API key loaded from file: {path_str}", debug)
+        return content.strip()
+    except IOError as e:
+        print(f"Error reading API key file '{path_str}': {e}")
+        return None
+
+def get_key_from_string(key_str: str, debug: bool = False) -> str:
+    """Treat the provided string as the API key and return it trimmed."""
+    log("Using API key passed as a literal string", debug)
+    return key_str.strip()
+
+def verify_key(key: str, debug: bool = False) -> bool:
+    """Check whether the provided API key is valid by calling the Google endpoint."""
+    log("Verifying API key...", debug)
     url = "https://generativelanguage.googleapis.com/v1/models"
     headers = {"x-goog-api-key": key}
     try:
         resp = requests.get(url, headers=headers, timeout=5)
         if resp.status_code == 200:
             log("API key verified successfully.", debug)
-            return key
+            return True
         else:
             print(f"API key verification failed (status: {resp.status_code})")
-            exit()
+            return False
     except requests.RequestException as e:
-        print(f"Error verifying API key: {e}")
-        exit()
+        print(f"Error during API key verification: {e}")
+        return False
+
+def resolve_api_key(arg_val: str | None, debug: bool = False) -> str:
+    """Locate and verify the API key from env, file path, or literal string."""
+    key = None
+
+    key = get_key_from_env(debug)
+
+    if not key and arg_val:
+        if Path(arg_val).is_file():
+            key = get_key_from_file(arg_val, debug)
+        else:
+            key = get_key_from_string(arg_val, debug)
+
+    if not key:
+        print("No API key provided. Use --api-key or set GENAI_API_KEY.")
+        exit(1)
+
+    if not verify_key(key, debug):
+        exit(1)
+
+    return key
 
 
 
 def main():
+    """Parse CLI arguments and run the fuzzer with the resolved API key."""
     parser = argparse.ArgumentParser(description="AI-powered Python fuzzer with Gemini + Atheris.")
 
     parser.add_argument("--src-dir", type=Path, required=True,
