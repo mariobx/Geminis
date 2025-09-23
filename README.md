@@ -18,4 +18,3 @@ This project creates a LLM-assisted Python fuzzing harness generator designed to
   2. Discover .py files; parse target snippets.
   3. (Optional) Filter by maintainability index by radon.
   4. Build prompt with Atheris docs + code; send to Gemini.
-  5. Creates python3.11 sandbox venv, writes harness, runs tests, cleans up temp venv, saves outputs.
