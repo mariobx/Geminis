@@ -50,3 +50,116 @@ base:
     {{CODE}}
     ---
 
+testing:
+  <<: *defaults
+  temperature: 0.3
+  description: >
+    Improved prompt to generate fast, deterministic Atheris harnesses that actually reach the target, assert properties, and surface crashes. Keeps your requirement to install packages inside the harness.
+  template: |
+    You are an expert in software security and Python fuzzing with Atheris. Generate a minimal, deterministic, runnable fuzzing harness for the function under “TARGET FUNCTION”. Your output **must be only one Python code block** (no prose). The script must:
+    - Install required non-stdlib packages **at the very top**.
+    - Import the real target under Atheris instrumentation (no mocks).
+    - Drive realistic, structure-aware inputs via `FuzzedDataProvider`.
+    - Include **crash-inducing property assertions** derived from the targets semantics.
+    - Re-raise exceptions so libFuzzer/Atheris can write crash artifacts.
+    - Start Atheris with `enable_python_coverage=True`.
+    - Be fast: no sleeps, prints, threads, or heavy logging in the hot path.
+
+    ---
+    ## 1) Analyze the Target (do this before writing code)
+    - Identify the function name and **all** parameters from “TARGET FUNCTION”.
+    - Infer types and constraints (lengths, ranges, enums, regexes, encodings).
+    - Note any **preconditions/invariants** from docstrings, comments, or code (e.g., idempotence, monotonicity, ordering, round-trip, charset/UTF-8 invariants).
+    - If arguments are interdependent (e.g., `len(data) == n`, or `index < len(seq)`), record those constraints.
+
+    ---
+    ## 2) Input Strategy (must reflect real structure)
+    Map each parameter to an appropriate generator from `atheris.FuzzedDataProvider`:
+    - Text: `ConsumeUnicodeNoSurrogates(n)` or `ConsumeString(n, allow_surrogates=False)`.
+    - Bytes: `ConsumeBytes(n)`.
+    - Ints: `ConsumeIntInRange(lo, hi)`; respect domain constraints from analysis.
+    - Floats: `ConsumeFloat()`, clamp if needed.
+    - Bools: `ConsumeBool()`.
+    - Collections: consume a bounded length and fill elements with appropriate types.
+    - When the target expects **structured** inputs (JSON/XML/paths/ids):
+      - Use small combinators: choose(kind) → branch into realistic constructors.
+      - Build **valid-by-default** values first; allow some chance for malformed cases.
+
+    ---
+    ## 3) Properties (this is how we turn logic bugs into crashes)
+    Implement at least **three** assertions that should always hold if the target is correct. Choose from:
+    - **Idempotence on “safe” inputs** (e.g., escaping twice ≡ once).
+    - **Round-trip** (`decode(encode(x)) == x` under constraints).
+    - **Monotonic / ordering** guarantees.
+    - **Pre/post conditions** (e.g., “no unescaped `<>&\"'` remain”, “length doesnt explode”, “result type is X”).
+    - **No exceptions** for specified valid domains; if invalid, either exception or sentinel—make it explicit.
+    Re-raise any exception to let Atheris record a crash.
+
+    ---
+    ## 4) Instrumentation (order matters)
+    - Use:
+      ```python
+      with atheris.instrument_imports():
+          # import the real target module(s) or paste the provided function
+      ```
+    - Do **not** mock the target. Call the exact function from “TARGET FUNCTION” (or its module path if provided).
+    - Do **not** call `atheris.instrument_all()` after importing; it wont retroactively instrument already-loaded code.
+
+    ---
+    ## 5) Harness Skeleton (requirements)
+    - At the **very top** (before non-stdlib imports), install packages:
+      ```python
+      import subprocess, sys
+      def _pip(pkg): subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+      _pip("setuptools"); _pip("wheel"); _pip("atheris")
+      # plus any other non-stdlib packages required by the target, inferred from CODE/DOCS
+      ```
+    - Then:
+      ```python
+      import os
+      os.environ.setdefault("PYTHONHASHSEED", "0")
+      import atheris, sys
+      with atheris.instrument_imports():
+          # import target module or define provided function here
+      ```
+    - `TestOneInput(data: bytes)`:
+      - Build inputs per Section 2.
+      - Call the real target.
+      - Assert properties per Section 3.
+      - Catch **only** broad `Exception` to annotate if you must, but **re-raise** immediately so Atheris/libFuzzer writes `crash-*` artifacts.
+    - `atheris.Setup(sys.argv, TestOneInput, enable_python_coverage=True)`
+    - `atheris.Fuzz()`
+
+    **Do not**: print continuously, sleep, start threads, or perform network I/O. Keep the hot path lean.
+
+    ---
+    ## 6) Recommended run flags (put these in comments at top of script)
+    ```
+    # Recommended:
+    #   -use_value_profile=1
+    #   -artifact_prefix=artifacts/
+    #   -timeout=10
+    #   -print_final_stats=1
+    # Seeds (optional but useful): provide a seeds/ dir with small, realistic examples.
+    # Dictionary (optional): -dict=dict.txt; include tokens/keywords/regex literals inferred from the target.
+    # Max input size: set -max_len to a reasonable upper bound if the target expects large inputs.
+    ```
+
+    ---
+    ## 7) Acceptance criteria (reject anything that fails this)
+    - The code is one file, imports the **real** target inside `instrument_imports()`.
+    - The harness compiles without additional edits after pip installs succeed.
+    - At least three **meaningful** assertions that connect to the targets semantics.
+    - No mocks of the target. No swallowing of exceptions (must re-raise).
+    - No noisy logging; only libFuzzer/Atheris output.
+    - Uses `FuzzedDataProvider` properly, respecting obvious constraints.
+
+    ---
+    {{DOCS}}
+
+    ---
+    **TARGET FUNCTION:**
+
+    {{CODE}}
+    ---
+

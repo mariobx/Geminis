@@ -35,10 +35,10 @@ def log(msg: str, echo: bool = False) -> None:
     line = f"{ts} --- DEBUG --- {filename}:{lineno} - {msg}\n"
 
     # If called inside an exception handler, append traceback
-    exc_info = sys.exc_info()
-    if exc_info[0] is not None:
-        line += "".join(traceback.format_exception(*exc_info)) + "\n"
-
+    exc_type, exc, tb = sys.exc_info()
+    if exc is not None and not isinstance(exc, SyntaxError):
+        line += "".join(traceback.format_exception(exc_type, exc, tb)) + "\n"
+    
     try:
         with _LOG_FILE.open("a", encoding="utf-8") as f:
             f.write(line)
