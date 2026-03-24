@@ -32,7 +32,6 @@ base:
     - **Input Generation:** Use the data provider to generate values for each of the target function's arguments according to your plan in step 2.
     - **Function Call:** Call the target function with the generated inputs inside a `try...except Exception` block. This is crucial for catching crashes and other errors.
     - **Logging and Data Persistence:**
-    - **Create a crash-only logger by opening one log file at startup—os.open(path, O_WRONLY|O_CREAT|O_APPEND, 0o644)—and reusing that file descriptor globally. In TestOneInput, wrap the target code in a try/except, and on any exception base64-encode the input, build a single-line record (<epoch-ns>|<pid>|<b64>|<exception> \n), append it to a bytearray buffer, then exception so Atheris still registers the crash. When the buffer exceeds 64 KiB, flush with one os.write(fd, buf); also flush once more via an atexit handler. Give each worker its own file (exceptions.<pid>.log) to avoid contention, keep logs append-only and line-oriented, and use only os and base64—no dynamic configs, locks, or heavy libraries—to ensure zero impact on fuzzing throughput. Also ensure that a single crash does not stop the fuzzing.
     - **Atheris Setup:** After the function definitions, properly initialize Atheris with `atheris.Setup(sys.argv, TestOneInput)` and start the fuzzer with `atheris.Fuzz()`. Also ensure that you enable instrumentation in the atheris.Setup() with enable_python_coverage=True.
 
     **4. Final Output:**
