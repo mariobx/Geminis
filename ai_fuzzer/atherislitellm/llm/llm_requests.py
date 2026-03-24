@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Optional, Tuple
 import yaml
-from ai_fuzzer.geminis.fetch import fetch_docs
+from ai_fuzzer.atherislitellm.fetch import fetch_docs
 import re
-from ai_fuzzer.geminis.logger.logs import log
+from ai_fuzzer.atherislitellm.logger.logs import log
 import litellm
 
 def extract_code_blocks(text):

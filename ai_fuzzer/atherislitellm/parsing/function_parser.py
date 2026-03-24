@@ -2,7 +2,7 @@ import os
 import ast
 from typing import List
 from pathlib import Path
-from ai_fuzzer.geminis.logger.logs import log
+from ai_fuzzer.atherislitellm.logger.logs import log
 
 def is_virtualenv_dir(path, debug=False):
     """

@@ -1,3 +1,21 @@
+Metadata-Version: 2.4
+Name: AtherisLiteLLM
+Version: 0.2.5
+Summary: AI-powered Python fuzzer using LiteLLM and Atheris to automatically generate and execute fuzzing harnesses.
+Author-email: Mario Marku <mariomarku7@gmail.com>
+License-Expression: GPL-3.0-or-later
+Project-URL: Homepage, https://github.com/mariobx
+Project-URL: Repository, https://github.com/mariobx/AtherisLiteLLM
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: litellm>=1.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: atheris>=2.3.0
+Requires-Dist: radon>=5.0.0
+Requires-Dist: requests>=2.31.0
+Dynamic: license-file
+
 ## AtherisLiteLLM:
 This project creates a LLM-assisted Python fuzzing harness generator designed to leverage large language models via LiteLLM to automatically build fuzzing harnesses for target Python functions and classes. It uses Google’s Atheris fuzzing engine to dynamically generate and test code, with the aim of uncovering bugs or vulnerabilities in software.
 

@@ -3,8 +3,8 @@ import argparse
 import os
 import sys
 import litellm
-from ai_fuzzer.geminis.run import run
-from ai_fuzzer.geminis.logger.logs import log, init_logger
+from ai_fuzzer.atherislitellm.run import run
+from ai_fuzzer.atherislitellm.logger.logs import log, init_logger
 
 def resolve_api_key(arg_val: str | None, model: str, debug: bool = False) -> str | None:
     """

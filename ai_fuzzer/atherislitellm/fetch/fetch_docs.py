@@ -1,7 +1,7 @@
 import re
 import requests
 import time
-from ai_fuzzer.geminis.logger.logs import log
+from ai_fuzzer.atherislitellm.logger.logs import log
 
 cache = {}
 

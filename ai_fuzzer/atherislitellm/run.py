@@ -2,11 +2,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Sequence, Dict
 import os
-from ai_fuzzer.geminis.llm import gem_request as atherisai
-from ai_fuzzer.geminis.sandbox import sandbox
-from ai_fuzzer.geminis.parsing import function_parser
-from ai_fuzzer.geminis.smell.smell import code_smells
-from ai_fuzzer.geminis.logger.logs import log
+from ai_fuzzer.atherislitellm.llm import llm_requests as atherisai
+from ai_fuzzer.atherislitellm.sandbox import sandbox
+from ai_fuzzer.atherislitellm.parsing import function_parser
+from ai_fuzzer.atherislitellm.smell.smell import code_smells
+from ai_fuzzer.atherislitellm.logger.logs import log
 
 def on_crash(output_dir: Path, data: list, debug: bool = False) -> None:
     """Write a crash report file containing harness outputs and log the event."""

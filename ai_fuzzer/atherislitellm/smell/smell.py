@@ -1,5 +1,5 @@
 from radon.metrics import mi_visit
-from ai_fuzzer.geminis.logger.logs import log
+from ai_fuzzer.atherislitellm.logger.logs import log
 
 def code_smells(python_code: str, threshold: float = 65.0, debug: bool = False) -> bool:
     """

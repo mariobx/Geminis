@@ -4,7 +4,7 @@ import tempfile
 import os
 from textwrap import dedent
 import venv
-from ai_fuzzer.geminis.logger.logs import log
+from ai_fuzzer.atherislitellm.logger.logs import log
 
 def save_to_file(name=None, text=None, path=None, debug=False):
     """Save provided text to a timestamped Atheris harness file in path,
