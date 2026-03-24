@@ -93,9 +93,6 @@ def main():
 
     # Resolve API Key
     api_key = resolve_api_key(args.api_key, args.model, args.verbose)
-    if not api_key:
-        print(f"Error: No API key found for model '{args.model}'. Please provide one via -k or environment variables.")
-        sys.exit(1)
 
     # Prepare extra parameters
     extra_params = getattr(args, 'extra_model_prompts', {}) or {}

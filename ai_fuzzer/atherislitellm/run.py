@@ -115,7 +115,7 @@ def save_harnesses(code_snippets: dict[str, str], run_dir: Path, debug: bool):
             sandbox.save_to_file(name, code, run_dir, debug=debug)
 
 def run(
-        source_dir: Path, output_dir: Path, prompt_id: str, prompt_yaml_path: Path, model: str, api: str, debug: bool, smell: bool, **kwargs
+        source_dir: Path, output_dir: Path, prompt_id: str, prompt_yaml_path: Path, model: str, api: str | None, debug: bool, smell: bool, **kwargs
 ) -> None:
     """Coordinate test generation: create client, generate snippets, and save them immediately."""
 
