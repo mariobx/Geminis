@@ -15,12 +15,11 @@ def resolve_api_key(arg_val: str | None, model: str, debug: bool = False) -> str
         log("Using API key provided via CLI", debug)
         return arg_val.strip()
 
-    # Check LiteLLM environment requirements for the model
     try:
         check = litellm.validate_environment(model)
         if check.get("keys_in_environment"):
             log(f"Environment is valid for model '{model}'", debug)
-            return None # LiteLLM will pick it up from env
+            return None #LiteLLM will pick it up from env
         
         missing = check.get("missing_keys", [])
         if missing:
@@ -35,6 +34,7 @@ def resolve_api_key(arg_val: str | None, model: str, debug: bool = False) -> str
             sys.exit(1)
     except Exception as e:
         log(f"Error validating environment with LiteLLM: {e}", debug)
+        sys.exit(1)
     
     return None
 
