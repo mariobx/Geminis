@@ -85,7 +85,9 @@ def main():
     init_logger(args.output_dir)
 
     # Validate model
-    if not litellm.check_valid_model(args.model):
+    try:
+        litellm.get_llm_provider(args.model)
+    except Exception:
         print(f"Warning: '{args.model}' might not be a recognized LiteLLM model. Proceeding anyway.")
 
     # Resolve API Key
