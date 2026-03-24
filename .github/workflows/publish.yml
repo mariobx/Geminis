@@ -15,7 +15,7 @@ jobs:
   tag-build-publish:
     environment:
       name: pypi
-      url: https://pypi.org/p/Geminis
+      url: https://pypi.org/project/AtherisLiteLLM/
     runs-on: ubuntu-latest
 
     steps:
