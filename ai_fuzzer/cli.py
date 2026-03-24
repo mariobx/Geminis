@@ -87,12 +87,15 @@ def main():
     # Validate model
     try:
         litellm.get_llm_provider(args.model)
-    except Exception:
-        print(f"Warning: '{args.model}' might not be a recognized LiteLLM model. Crashing.")
-        quit()
+    except Exception as e:
+        print(f"Error: '{args.model}' is not a recognized LiteLLM model. {str(e)}")
+        sys.exit(1)
 
     # Resolve API Key
     api_key = resolve_api_key(args.api_key, args.model, args.verbose)
+    if not api_key:
+        print(f"Error: No API key found for model '{args.model}'. Please provide one via -k or environment variables.")
+        sys.exit(1)
 
     # Prepare extra parameters
     extra_params = getattr(args, 'extra_model_prompts', {}) or {}
