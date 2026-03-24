@@ -4,5 +4,6 @@ code_analysis.log
 output_files/
 dist/
 Geminis.egg-info/
+AtherisLiteLLM.egg-info/
 venv/
 .git
