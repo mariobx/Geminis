@@ -88,7 +88,8 @@ def main():
     try:
         litellm.get_llm_provider(args.model)
     except Exception:
-        print(f"Warning: '{args.model}' might not be a recognized LiteLLM model. Proceeding anyway.")
+        print(f"Warning: '{args.model}' might not be a recognized LiteLLM model. Crashing.")
+        quit()
 
     # Resolve API Key
     api_key = resolve_api_key(args.api_key, args.model, args.verbose)
