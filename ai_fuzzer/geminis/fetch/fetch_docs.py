@@ -1,43 +1,35 @@
 import re
-import backoff
 import requests
+import time
 from ai_fuzzer.geminis.logger.logs import log
 
 cache = {}
 
-RETRYABLE_EXCEPTIONS = (
-    requests.exceptions.RequestException,
-    requests.exceptions.Timeout,
-    requests.exceptions.ConnectionError
-)
+def fetch_with_retry(url: str, max_tries: int = 5, debug: bool = False) -> str:
+    """Fetch URL with a simple retry mechanism."""
+    for i in range(max_tries):
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            content = response.text
+            if content:
+                return content
+            log(f"Empty response from {url}, retrying...", debug)
+        except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
+            log(f"Error fetching {url}: {e}. Retrying ({i+1}/{max_tries})...", debug)
+            if i < max_tries - 1:
+                time.sleep(2 ** i) # Exponential backoff
+    
+    raise requests.exceptions.RequestException(f"Failed to fetch {url} after {max_tries} attempts")
 
-def is_bad_response(docs: str) -> bool:
-    """Return True when the fetched documentation text is empty or None."""
-    if not docs:
-        # The response is None or "", which is considered a failure.
-        log("A response error occurred (empty/missing text). Retrying...", True)
-        return True
-
-    return False #success
-
-
-@backoff.on_predicate(backoff.expo, predicate=is_bad_response, max_tries=5, jitter=backoff.full_jitter)
-@backoff.on_exception(backoff.expo, RETRYABLE_EXCEPTIONS, max_tries=5, jitter=backoff.full_jitter)
 def fetch_atheris_readme(debug: bool = False) -> str:
-    """Fetch and return Google's Atheris README as cleaned plain text.
-
-    The returned string is cached to avoid repeated network calls.
-    """
-
+    """Fetch and return Google's Atheris README as cleaned plain text."""
     if "readme" in cache:
         return cache["readme"]
 
     url = "https://raw.githubusercontent.com/google/atheris/master/README.md"
+    content = fetch_with_retry(url, debug=debug)
 
-    response = requests.get(url, timeout=8)
-    response.raise_for_status()
-
-    content = response.text
     content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
     content = re.sub(r'\[.*?\]\(https?:\/\/.*?\)', '', content)
     content = re.sub(r'\n{3,}', '\n\n', content)
@@ -54,24 +46,14 @@ This is the official README documentation for Google's Atheris fuzzing framework
     log("fetched atheris readme", debug)
     return formatted
 
-
-@backoff.on_exception(backoff.expo, RETRYABLE_EXCEPTIONS, max_tries=5, jitter=backoff.full_jitter)
-@backoff.on_predicate(backoff.expo, predicate=is_bad_response, max_tries=5, jitter=backoff.full_jitter)
-def fetch_atheris_hooking_docs(debug=False):
-    """Fetch and return Google's Atheris hooking docs as cleaned plain text.
-
-    The returned string is cached to avoid repeated network calls.
-    """
-
+def fetch_atheris_hooking_docs(debug: bool = False) -> str:
+    """Fetch and return Google's Atheris hooking docs as cleaned plain text."""
     if "hooking" in cache:
         return cache["hooking"]
 
     url = "https://raw.githubusercontent.com/google/atheris/refs/heads/master/hooking.md"
-    
-    response = requests.get(url, timeout=8)
-    response.raise_for_status()
+    content = fetch_with_retry(url, debug=debug)
 
-    content = response.text
     content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
     content = re.sub(r'\[.*?\]\(https?:\/\/.*?\)', '', content)
     content = re.sub(r'\n{3,}', '\n\n', content)

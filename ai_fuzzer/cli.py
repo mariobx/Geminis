@@ -1,118 +1,119 @@
 from pathlib import Path
 import argparse
-from ai_fuzzer.geminis.run import run
 import os
-import requests
+import sys
+import litellm
+from ai_fuzzer.geminis.run import run
 from ai_fuzzer.geminis.logger.logs import log, init_logger
 
+def resolve_api_key(arg_val: str | None, model: str, debug: bool = False) -> str | None:
+    """
+    Resolve API key from CLI or Environment.
+    If not found, use LiteLLM to tell the user which env var to set.
+    """
+    if arg_val:
+        log("Using API key provided via CLI", debug)
+        return arg_val.strip()
 
-def get_key_from_env(debug: bool = False) -> str | None:
-    """Return an API key from the GENAI_API_KEY environment variable if present."""
-    if env_key := os.getenv("GENAI_API_KEY"):
-        log("Using API key from environment variable", debug)
-        return env_key.strip()
+    # Check LiteLLM environment requirements for the model
+    try:
+        check = litellm.validate_environment(model)
+        if check.get("keys_in_environment"):
+            log(f"Environment is valid for model '{model}'", debug)
+            return None # LiteLLM will pick it up from env
+        
+        missing = check.get("missing_keys", [])
+        if missing:
+            print(f"Error: Missing API key for model '{model}'.")
+            print("Please provide it via --api-key or set the following environment variable(s):")
+            for key in missing:
+                # Provide cross-platform instructions
+                if sys.platform == "win32":
+                    print(f"  set {key}=your_api_key_here")
+                else:
+                    print(f"  export {key}=your_api_key_here")
+            sys.exit(1)
+    except Exception as e:
+        log(f"Error validating environment with LiteLLM: {e}", debug)
+    
     return None
 
-def get_key_from_file(path_str: str, debug: bool = False) -> str | None:
-    """Read and return an API key from a text file, or None on error."""
-    try:
-        content = Path(path_str).read_text(encoding="utf-8")
-        log(f"API key loaded from file: {path_str}", debug)
-        return content.strip()
-    except IOError as e:
-        print(f"Error reading API key file '{path_str}': {e}")
-        return None
-
-def get_key_from_string(key_str: str, debug: bool = False) -> str:
-    """Treat the provided string as the API key and return it trimmed."""
-    log("Using API key passed as a literal string", debug)
-    return key_str.strip()
-
-def verify_key(key: str, debug: bool = False) -> bool:
-    """Check whether the provided API key is valid by calling the Google endpoint."""
-    log("Verifying API key...", debug)
-    url = "https://generativelanguage.googleapis.com/v1/models"
-    headers = {"x-goog-api-key": key}
-    try:
-        resp = requests.get(url, headers=headers, timeout=5)
-        if resp.status_code == 200:
-            log("API key verified successfully.", debug)
-            return True
-        else:
-            print(f"API key verification failed (status: {resp.status_code})")
-            return False
-    except requests.RequestException as e:
-        print(f"Error during API key verification: {e}")
-        return False
-
-def resolve_api_key(arg_val: str | None, debug: bool = False) -> str:
-    """Locate and verify the API key from env, file path, or literal string."""
-    key = None
-
-    key = get_key_from_env(debug)
-
-    if not key and arg_val:
-        if Path(arg_val).is_file():
-            key = get_key_from_file(arg_val, debug)
-        else:
-            key = get_key_from_string(arg_val, debug)
-
-    if not key:
-        print("No API key provided. Use --api-key or set GENAI_API_KEY.")
-        exit(1)
-
-    if not verify_key(key, debug):
-        exit(1)
-
-    return key
-
-
+class ParseKwargs(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, dict())
+        for value in values:
+            if '=' in value:
+                key, val = value.split('=', 1)
+                getattr(namespace, self.dest)[key] = val
+            else:
+                log(f"Warning: Ignoring malformed extra prompt: {value}", True)
 
 def main():
-    """Parse CLI arguments and run the fuzzer with the resolved API key."""
-    parser = argparse.ArgumentParser(description="AI-powered Python fuzzer with Gemini + Atheris.")
+    """Parse CLI arguments and run the fuzzer."""
+    parser = argparse.ArgumentParser(description="AI-powered Python fuzzer with AtherisLiteLLM (LiteLLM + Atheris).")
 
     parser.add_argument("-s", "--src-dir", type=Path, required=True,
                         help="Path to the Python source directory to fuzz.")
 
     parser.add_argument("-o", "--output-dir", type=Path, required=True,
-                        help="Where to store crash logs.")
+                        help="Where to store crash logs and generated harnesses.")
 
     parser.add_argument("-pp", "--prompts-path", type=Path, required=True,
-                        help="Path to prompts.yaml config file (default: geminis/llm/prompts.yaml)")
+                        help="Path to prompts.yaml config file.")
 
     parser.add_argument("-p", "--prompt", default="base", required=True,
                         help="Prompt ID from prompts.yaml to use (default: 'base')")
 
-    parser.add_argument("-m", "--mode", choices=["functions", "classes"], default="functions",
-                        help="Target fuzzing of functions or classes, default is functions")
-    parser.add_argument("-d", "--verbose", "-v", "--debug", action="store_true",
-                        help="Enable debug/verbose mode to print internal states.")
+    parser.add_argument("-m", "--model", type=str, required=True,
+                        help="LiteLLM model string (e.g., 'gemini/gemini-1.5-flash', 'openai/gpt-4').")
+
     parser.add_argument("-k", "--api-key", type=str,
-                        help="API key string or path to file containing it. This can be the api key itself, a path to the api as a single line txt file, or setting the enviorment variable GEMINI_API_KEY with bash: export GEMINI_API_KEY=<YOUR_API_KEY_HERE>")
+                        help="API key string. If not provided, the tool will check environment variables.")
+
+    parser.add_argument("-e", "--extra-model-prompts", nargs='*', action=ParseKwargs,
+                        help="Extra vendor-specific parameters as key=value pairs (e.g., project=my-project).")
+
+    parser.add_argument("-d", "--verbose", "-v", "--debug", action="store_true",
+                        help="Enable debug/verbose mode.")
+
     parser.add_argument("-sm", "--smell", action="store_true",
-                        help="Enable code smell to judge programatically if code should be fuzzed.")
+                        help="Enable code smell filtering via Radon (Maintainability Index).")
 
     args = parser.parse_args()
-    output_dir = args.output_dir
-    init_logger(output_dir)
-    api_key=resolve_api_key(args.api_key, args.verbose)
+
+    # Initialize logger early
+    init_logger(args.output_dir)
+
+    # Validate model
+    if not litellm.check_valid_model(args.model):
+        print(f"Warning: '{args.model}' might not be a recognized LiteLLM model. Proceeding anyway.")
+
+    # Resolve API Key
+    api_key = resolve_api_key(args.api_key, args.model, args.verbose)
+
+    # Prepare extra parameters
+    extra_params = getattr(args, 'extra_model_prompts', {}) or {}
+    if extra_params:
+        log(f"Using extra model parameters: {list(extra_params.keys())}", args.verbose)
 
     try:
         run(
             source_dir=args.src_dir,
-            output_dir=output_dir,
+            output_dir=args.output_dir,
             prompt_id=args.prompt,
-            mode=args.mode,
             prompt_yaml_path=args.prompts_path,
-            debug=args.verbose,
+            model=args.model,
             api=api_key,
-            smell=args.smell
+            debug=args.verbose,
+            smell=args.smell,
+            **extra_params
         )
     except Exception as e:
         import traceback
-        print("ERROR:", e)
-        traceback.print_exc()
+        print(f"ERROR: {e}")
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

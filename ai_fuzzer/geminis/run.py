@@ -25,15 +25,11 @@ def make_run_dir(base: Path, debug=False) -> Path:
     timestamp = datetime.now().strftime("%m-%d-%y_%I-%M-%S%p").lower()
     run_dir = base / f"run-{timestamp}"
     run_dir.mkdir(parents=True, exist_ok=False)
-    log(f"Created run directory at: {run_dir} (type: {type(run_dir)})", debug)
+    log(f"Created run directory at: {run_dir}", debug)
     return run_dir
 
-def retrieve_function_candidates(client, path: Path, prompt_id: str, prompt_yaml_path: Path, output_dir: Path, debug: bool = False, smell: bool = False) -> dict[str, str]:
-    """Discover functions in the source path and generate test snippets via the LLM client.
-
-    Functions may be filtered by code smell heuristics. Returns a mapping
-    of function name to generated test code.
-    """
+def retrieve_function_candidates(client: dict, path: Path, prompt_id: str, prompt_yaml_path: Path, output_dir: Path, debug: bool = False, smell: bool = False, **kwargs) -> dict[str, str]:
+    """Discover functions in the source path and generate test snippets via the LLM client."""
 
     func_tests = {}
     pyfiles = function_parser.get_python_file_paths(path, debug=debug)
@@ -53,6 +49,7 @@ def retrieve_function_candidates(client, path: Path, prompt_id: str, prompt_yaml
                     target_func=func_body,
                     yaml_path=prompt_yaml_path,
                     debug=debug,
+                    **kwargs
                 )
                 block = atherisai.extract_code_blocks(response)
                 func_tests[func_name] = block
@@ -62,64 +59,76 @@ def retrieve_function_candidates(client, path: Path, prompt_id: str, prompt_yaml
                 on_crash(output_dir, list(func_tests.values()), debug=debug)
     return func_tests
 
-def retrieve_class_candidates(client, path: Path, prompt_id: str, prompt_yaml_path: Path, output_dir: Path, debug: bool = False, smell: bool = False) -> dict[str, str]:
-    """Discover classes in the source path and generate test snippets via the LLM client.
-
-    Classes may be filtered by code smell heuristics. Returns a mapping
-    of class name to generated test code.
-    """
+def retrieve_class_candidates(client: dict, path: Path, prompt_id: str, prompt_yaml_path: Path, output_dir: Path, debug: bool = False, smell: bool = False, **kwargs) -> dict[str, str]:
+    """Discover classes in the source path and generate test snippets via the LLM client."""
 
     class_tests = {}
     pyfiles = function_parser.get_python_file_paths(path, debug=debug)
     if pyfiles:
         log(f"Retrieved {len(pyfiles)} Python files from: {path}", debug)
     for pyfile in pyfiles:
-        classes = function_parser.extract_classes(pyfile, debug=debug)
-        log(f"Found {len(classes)} classes in {pyfile}", debug)
-        for clss_name, clss_body in classes.items():
-            try:
+        classes_in_file, functions_inside_classes = function_parser.extract_classes(pyfile, debug=debug)
+        log(f"Found {len(classes_in_file)} classes in {pyfile}", debug)
+        try:
+            for class_name, class_body in classes_in_file.items():
                 if smell:
-                    if not code_smells(python_code=clss_body, debug=debug):
+                    if not code_smells(python_code=class_body, debug=debug):
                         continue
-                response = atherisai.get_response(
-                    client=client,
-                    prompt_id=prompt_id,
-                    target_func=clss_body,
-                    yaml_path=prompt_yaml_path,
-                    debug=debug,
-                )
-                block = atherisai.extract_code_blocks(response)
-                class_tests[clss_name] = block
-            except Exception as e:
-                log(f"Error processing class: {e}", debug)
-                on_crash(output_dir, list(class_tests.values()), debug=debug)
+                methods = functions_inside_classes.get(class_name, []) 
+                for function_name, function_body in methods:
+                    customized_target_prompt = (
+                        f"\n\n{class_body}\n\n"
+                        f"**FUZZING FOCUS**\n"
+                        f"Method Name: {function_name}\n"
+                        f"Method Body:\n{function_body}"
+                    )
+                    response = atherisai.get_response(
+                        client=client,
+                        prompt_id=prompt_id,
+                        target_func=customized_target_prompt,
+                        yaml_path=prompt_yaml_path,
+                        debug=debug,
+                        **kwargs
+                    )
+                    block = atherisai.extract_code_blocks(response)
+                    key = f"{class_name}.{function_name}"
+                    class_tests[key] = block
+        except Exception as e:
+            log(f"Error processing class: {e}", debug)
+            on_crash(output_dir, list(class_tests.values()), debug=debug)
     return class_tests
 
-def run_function_testing(code_snippets: dict[str, str], output_base: Path, debug: bool):
-    """Save generated function test snippets into a new timestamped run directory."""
-
-    log(f"Creating function tests, total snippets: {len(code_snippets)}", debug)
-    path = make_run_dir(output_base, debug=debug)
+def save_harnesses(code_snippets: dict[str, str], run_dir: Path, debug: bool):
+    """Save generated harnesses into the provided run directory."""
+    if not code_snippets:
+        return
+    log(f"Saving {len(code_snippets)} harnesses to {run_dir}", debug)
     for name, code in code_snippets.items():
-        sandbox.save_to_file(name, code, path, debug=debug)
+        if code:
+            sandbox.save_to_file(name, code, run_dir, debug=debug)
 
 def run(
-    source_dir: Path, output_dir: Path, prompt_id: str, mode: str, prompt_yaml_path: Path, api: str, debug: bool, smell: bool
+        source_dir: Path, output_dir: Path, prompt_id: str, prompt_yaml_path: Path, model: str, api: str, debug: bool, smell: bool, **kwargs
 ) -> None:
-    """Coordinate test generation: create client, generate snippets, and save them.
+    """Coordinate test generation: create client, generate snippets, and save them."""
 
-    Logs actions and selects either function- or class-based generation according
-    to the `mode` argument.
-    """
+    log(f"run() called with source_dir={source_dir}, output_dir={output_dir}, model={model}, prompt_id={prompt_id}", debug)
 
-    log(f"run() called with mode={mode}, source_dir={source_dir}, output_dir={output_dir}, prompt_id={prompt_id}, prompt_yaml_path={prompt_yaml_path}", debug)
+    client = {
+            "model": model.strip() if model else "",
+            "api_key": api.strip() if api else None,
+    }
 
-    client = atherisai.genai.Client(api_key=api)
-    if mode == "functions":
-        code_snippets = retrieve_function_candidates(client, source_dir, prompt_id, prompt_yaml_path, output_dir=output_dir, debug=debug, smell=smell)
-    elif mode == "classes":
-        code_snippets = retrieve_class_candidates(client, source_dir, prompt_id, prompt_yaml_path, output_dir=output_dir, debug=debug, smell=smell)
-    else:
-        raise ValueError(f"Unknown mode: {mode}")
+    run_dir = make_run_dir(output_dir, debug=debug)
 
-    run_function_testing(code_snippets, output_dir, debug=debug)
+    log(f"Starting candidate retrieval for functions from {source_dir}", debug)
+    function_code_snippets = retrieve_function_candidates(client, source_dir, prompt_id, prompt_yaml_path, output_dir=output_dir, debug=debug, smell=smell, **kwargs)
+    log(f"Found {len(function_code_snippets)} function snippets", debug)
+
+    log(f"Starting candidate retrieval for classes from {source_dir}", debug)
+    class_code_snippets = retrieve_class_candidates(client, source_dir, prompt_id, prompt_yaml_path, output_dir=output_dir, debug=debug, smell=smell, **kwargs)
+    log(f"Found {len(class_code_snippets)} class snippets", debug)
+
+    save_harnesses(function_code_snippets, run_dir, debug=debug)
+    save_harnesses(class_code_snippets, run_dir, debug=debug)
+    log(f"Run completed. All harnesses saved in {run_dir}", debug)

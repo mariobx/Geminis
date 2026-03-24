@@ -1,7 +1,7 @@
 [project]
-name = "Geminis"
+name = "AtherisLiteLLM"
 version = "0.1.049"
-description = "AI-powered Python fuzzer using Gemini and Atheris to automatically generate and execute fuzzing harnesses."
+description = "AI-powered Python fuzzer using LiteLLM and Atheris to automatically generate and execute fuzzing harnesses."
 authors = [
   { name="Mario Marku", email="mariomarku7@gmail.com" }
 ]
@@ -10,17 +10,16 @@ license = "GPL-3.0-or-later"
 requires-python = ">=3.11,"
 
 dependencies = [
-  "google-genai>=0.3.2",
+  "litellm>=1.0.0",
   "pyyaml>=6.0",
   "atheris>=2.3.0",
-  "path==17.1.0",
   "radon>=5.0.0",
-
+  "requests>=2.31.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/mariobx"
-Repository = "https://github.com/mariobx/Geminis"
+Repository = "https://github.com/mariobx/AtherisLiteLLM"
 
 [project.scripts]
 geminis = "ai_fuzzer.cli:main"
