@@ -1,6 +1,6 @@
 [project]
 name = "Geminis"
-version = "0.2.000"
+version = "0.2.001"
 description = "AI-powered Python fuzzer using LiteLLM and Atheris to automatically generate and execute fuzzing harnesses."
 authors = [
   { name="Mario Marku", email="mariomarku7@gmail.com" }
