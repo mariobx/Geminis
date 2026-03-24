@@ -1,5 +1,5 @@
 [project]
-name = "AtherisLiteLLM"
+name = "Geminis"
 version = "0.2.000"
 description = "AI-powered Python fuzzer using LiteLLM and Atheris to automatically generate and execute fuzzing harnesses."
 authors = [
