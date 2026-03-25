@@ -1,13 +1,13 @@
 [project]
 name = "AtherisLiteLLM"
-version = "0.2.011"
+version = "0.2.012"
 description = "AI-powered Python fuzzer using LiteLLM and Atheris to automatically generate and execute fuzzing harnesses."
 authors = [
   { name="Mario Marku", email="mariomarku7@gmail.com" }
 ]
 readme = "README.md"
 license = "GPL-3.0-or-later"
-requires-python = ">=3.11,"
+requires-python = ">=3.12,"
 
 dependencies = [
   "litellm>=1.0.0",
