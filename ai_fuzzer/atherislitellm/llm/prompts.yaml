@@ -53,7 +53,7 @@ testing:
   <<: *defaults
   temperature: 0.3
   description: >
-    Improved prompt to generate fast, deterministic Atheris harnesses that actually reach the target, assert properties, and surface crashes. Keeps your requirement to install packages inside the harness.
+    Improved prompt to generate fast, deterministic Atheris harnesses that actually reach the target, assert properties, and surface crashes. Keeps requirement to install packages inside the harness.
   template: |
     You are an expert in software security and Python fuzzing with Atheris. Generate a minimal, deterministic, runnable fuzzing harness for the function under “TARGET FUNCTION”. Your output **must be only one Python code block** (no prose). The script must:
     - Install required non-stdlib packages **at the very top**.
@@ -162,3 +162,179 @@ testing:
     {{CODE}}
     ---
 
+
+codegemma:
+  <<: *defaults
+  temperature: 0.2 # A temperature of 0.2 is optimal for CodeGemma. It keeps the model highly deterministic for accurate syntax and logic, while strictly minimizing conversational hallucinations.
+  description: >
+    Optimized prompt for CodeGemma to generate complete Python Atheris fuzzing harnesses.
+  template: |
+    <start_of_turn>user
+    You are an expert vulnerability researcher and Python developer. Your task is to write an Atheris fuzzing harness for the provided target function.
+
+    Follow these absolute rules to generate the code:
+    1. DO NOT output conversational filler, markdown explanations, or introductory text. Output ONLY valid, executable Python code.
+    2. The harness MUST import the target module strictly within a `with atheris.instrument_imports():` block.
+    3. The harness MUST define a `TestOneInput(data: bytes)` function as the main entry point.
+    4. Use `atheris.FuzzedDataProvider(data)` to translate raw bytes into the typed primitives required by the target function.
+    5. Analyze the target function's arguments. Map them strictly to the FuzzedDataProvider API provided in the context below. Do not invent methods.
+    6. Wrap the execution of the target function in a `try...except` block to catch expected, domain-specific exceptions (e.g., ValueError, TypeError) resulting from invalid input rejection. Do not catch `Exception` broadly.
+    7. Conclude the script by executing `atheris.Setup(sys.argv, TestOneInput)` followed immediately by `atheris.Fuzz()`.
+
+    ### CONTEXT: ATHERIS FUZZEDDATAPROVIDER API
+    Use exactly these methods to transform the `data` payload:
+    - `ConsumeBytes(count: int)` -> bytes
+    - `ConsumeUnicodeNoSurrogates(count: int)` -> str (ALWAYS use this for string requirements to avoid invalid UTF-8 crashes)
+    - `ConsumeInt(size: int)` -> int
+    - `ConsumeIntInRange(min: int, max: int)` -> int
+    - `ConsumeRegularFloat()` -> float (Prevents mathematically disruptive NaN/Inf values)
+    - `ConsumeBool()` -> bool
+    - `PickValueInList(l: list)` -> any
+
+    ### EXAMPLE: ZERO-SHOT EXPECTED OUTPUT FORMAT
+    ```python
+    import sys
+    import atheris
+
+    with atheris.instrument_imports():
+        from target_library import parse_user_record
+
+    def TestOneInput(data: bytes):
+        fdp = atheris.FuzzedDataProvider(data)
+        try:
+            username = fdp.ConsumeUnicodeNoSurrogates(32)
+            age = fdp.ConsumeIntInRange(1, 120)
+            is_active = fdp.ConsumeBool()
+
+            # Reject inputs that fail basic length constraints to optimize fuzzing speed
+            if len(username) < 3:
+                return
+
+            parse_user_record(username, age, is_active)
+        except (ValueError, TypeError):
+            # Suppress expected parsing failures to maintain the fuzzing loop
+            pass
+
+    if __name__ == "__main__":
+        atheris.Setup(sys.argv, TestOneInput)
+        atheris.Fuzz()
+    TARGET FUNCTION SOURCE CODE
+    {{DOCS}}
+
+    Synthesize the Atheris fuzzing harness for the target function executing the exact logic demonstrated above.<end_of_turn>
+    <start_of_turn>model
+
+
+codegemma_2:
+  <<: *defaults
+  temperature: 0.25
+  description: >
+    Trying to make Code Gemma Templates work
+  template: |
+    <start_of_turn>user
+    You are an expert Python security researcher. You must generate a highly complex, structure-aware Atheris fuzzing harness for the provided target logic.
+
+    ### LOGICAL REASONING STEPS TO EXECUTE:
+    1. **Type Inference**: Analyze the target code below. Deduce the exact object hierarchies and custom classes required.
+    2. **Data Generation**: Use `atheris.FuzzedDataProvider` to generate raw primitives, then logically construct the complex nested objects required by the target. Restrict any recursive data generation to a maximum depth of 5 to prevent StackOverflow crashes.
+    3. **Dependency Mocking**: If the target function performs file I/O, network requests (HTTP), or database queries, you MUST import the `unittest.mock` library and use `patch` to mock these external dependencies within `TestOneInput`. The fuzzer must operate in total isolation.
+    4. **Validation Check**: If the constructed data is logically invalid before passing it to the target function, execute a `return` to skip the iteration and preserve execution speed.
+
+    ### ATHERIS API REFERENCE
+    - `ConsumeBytes(count: int)`
+    - `ConsumeUnicodeNoSurrogates(count: int)`
+    - `ConsumeFloatListInRange(count: int, min: float, max: float)`
+    - `PickValueInList(l: list)`
+
+    ### EXAMPLE: MOCKING AND HIERARCHICAL DATA HANDLING
+    ```python
+    import sys
+    import atheris
+    from unittest.mock import patch, MagicMock
+
+    with atheris.instrument_imports():
+        from cloud_processor import analyze_payload, ServerContext
+
+    def TestOneInput(data: bytes):
+        fdp = atheris.FuzzedDataProvider(data)
+
+        # Step 1: Generate Primitives using FDP
+        session_id = fdp.ConsumeUnicodeNoSurrogates(16)
+        risk_score = fdp.ConsumeFloatInRange(0.0, 1.0)
+        server_region = fdp.PickValueInList()
+
+        # Step 2: Construct Complex Object
+        context_obj = ServerContext(id=session_id, risk=risk_score, region=server_region)
+
+        # Step 3: Isolate execution by mocking network dependencies
+        with patch('cloud_processor.requests.post') as mock_post:
+            mock_post.return_value.status_code = 200
+            try:
+                analyze_payload(context_obj)
+            except (ValueError, KeyError, TypeError):
+                # Ignore exceptions related to expected input sanitization
+                pass
+
+    if __name__ == "__main__":
+        atheris.Setup(sys.argv, TestOneInput)
+        atheris.Fuzz()
+    TARGET CODE
+    {INSERT_COMPLEX_TARGET_SOURCE_CODE_HERE}
+
+    Generate the fully self-contained fuzzing script executing the precise logical reasoning steps and mock implementation logic shown above.<end_of_turn>
+    <start_of_turn>model
+
+codegemma_3:
+  <<: *defaults
+  temperature: 0.25
+  description: >
+    Trying to make Code Gemma Templates work
+  template: |
+    <start_of_turn>user
+    You are a senior security engineer. Write a structure-aware Atheris fuzzing harness utilizing a Custom Mutator for the provided parser logic.
+
+    ### LOGICAL REQUIREMENTS:
+    1. **Custom Mutator Definition**: Define a function `CustomMutator(data, max_size, seed)` that handles the structural manipulation of the input format (e.g., decompression, structural decoding).
+    2. **Mutation Mechanics**: Within the custom mutator, safely attempt to decode the incoming `data`. Apply a structural mutation, then re-encode it before returning the byte array. Use standard `atheris.Mutate(data, max_size)` to apply baseline bit-flips to the decoded payload.
+    3. **Fallback Logic**: If the initial data fails to decode within the mutator, return a valid, hardcoded structural seed to establish a baseline for subsequent mutations.
+    4. **Target Execution**: Define `TestOneInput(data: bytes)` to execute the target parser against the mutated payload, wrapping it in a `try...except` block to ignore expected parsing exceptions.
+    5. **Orchestration**: Initialize the custom mutator sequence using `atheris.MutateAndTestOneInput`.
+
+    ### EXAMPLE: ZLIB CUSTOM MUTATOR IMPLEMENTATION
+    ```python
+    import sys
+    import atheris
+
+    with atheris.instrument_imports():
+        import zlib
+        from target_parser import parse_compressed_payload
+
+    def CustomMutator(data, max_size, seed):
+        try:
+            # Attempt to structurally decompress the incoming fuzzer data
+            decompressed = zlib.decompress(data)
+        except zlib.error:
+            # Establish a valid baseline structural seed if decompression fails
+            decompressed = b'ValidInitialSeedState'
+
+        # Apply baseline mutational chaos to the exposed structural core
+        mutated_core = atheris.Mutate(decompressed, len(decompressed))
+
+        # Re-encode the structure to bypass the target's initial decompression check
+        return zlib.compress(mutated_core)
+
+    def TestOneInput(data: bytes):
+        try:
+            parse_compressed_payload(data)
+        except (zlib.error, ValueError):
+            pass
+
+    if __name__ == "__main__":
+        # Crucial: Register the custom mutator to intercept the libFuzzer loop
+        atheris.Setup(sys.argv, atheris.MutateAndTestOneInput, custom_mutator=CustomMutator)
+        atheris.Fuzz()
+    TARGET PARSER CODE
+    {INSERT_COMPRESSOR_OR_PARSER_SOURCE_CODE_HERE}
+
+    Synthesize the structure-aware Atheris fuzzing harness featuring a custom mutator tailored exactly to the grammatical requirements of the target code.<end_of_turn>
+    <start_of_turn>model

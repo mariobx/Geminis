@@ -14,9 +14,9 @@ def fetch_with_retry(url: str, max_tries: int = 5, debug: bool = False) -> str:
             content = response.text
             if content:
                 return content
-            log(f"Empty response from {url}, retrying...", debug)
+            log(f"Empty response from {url}, retrying...", level="DEBUG", debug=debug)
         except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
-            log(f"Error fetching {url}: {e}. Retrying ({i+1}/{max_tries})...", debug)
+            log(f"Error fetching {url}: {e}. Retrying ({i+1}/{max_tries})...", level="DEBUG", debug=debug)
             if i < max_tries - 1:
                 time.sleep(2 ** i) # Exponential backoff
     
@@ -28,12 +28,13 @@ def fetch_atheris_readme(debug: bool = False) -> str:
         return cache["readme"]
 
     url = "https://raw.githubusercontent.com/google/atheris/master/README.md"
-    content = fetch_with_retry(url, debug=debug)
-
-    content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
-    content = re.sub(r'\[.*?\]\(https?:\/\/.*?\)', '', content)
-    content = re.sub(r'\n{3,}', '\n\n', content)
-    formatted = f"""
+    try:
+        content = fetch_with_retry(url, debug=debug)
+        content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
+        content = re.sub(r'\[.*?\]\(https?:\/\/.*?\)', '', content)
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        
+        formatted = f"""
 ==== START OF ATHERIS DOCUMENTATION ====
 
 This is the official README documentation for Google's Atheris fuzzing framework for Python.
@@ -42,9 +43,12 @@ This is the official README documentation for Google's Atheris fuzzing framework
 
 ==== END OF ATHERIS DOCUMENTATION ====
 """
-    cache["readme"] = formatted
-    log("fetched atheris readme", debug)
-    return formatted
+        cache["readme"] = formatted
+        log("Fetched Atheris README", level="DEBUG", debug=debug)
+        return formatted
+    except Exception as e:
+        log(f"Could not fetch Atheris README: {e}", level="ERROR")
+        return ""
 
 def fetch_atheris_hooking_docs(debug: bool = False) -> str:
     """Fetch and return Google's Atheris hooking docs as cleaned plain text."""
@@ -52,12 +56,13 @@ def fetch_atheris_hooking_docs(debug: bool = False) -> str:
         return cache["hooking"]
 
     url = "https://raw.githubusercontent.com/google/atheris/refs/heads/master/hooking.md"
-    content = fetch_with_retry(url, debug=debug)
-
-    content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
-    content = re.sub(r'\[.*?\]\(https?:\/\/.*?\)', '', content)
-    content = re.sub(r'\n{3,}', '\n\n', content)
-    formatted = f"""
+    try:
+        content = fetch_with_retry(url, debug=debug)
+        content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
+        content = re.sub(r'\[.*?\]\(https?:\/\/.*?\)', '', content)
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        
+        formatted = f"""
 ==== START OF ATHERIS' HOOKING DOCUMENTATION ====
 
 This is the official README documentation for Google's Atheris fuzzing framework for Python.
@@ -66,6 +71,9 @@ This is the official README documentation for Google's Atheris fuzzing framework
 
 ==== END OF ATHERIS' HOOKING DOCUMENTATION ====
 """
-    cache["hooking"] = formatted
-    log("fetched atheris hooking documentation", debug)
-    return formatted
+        cache["hooking"] = formatted
+        log("Fetched Atheris hooking docs", level="DEBUG", debug=debug)
+        return formatted
+    except Exception as e:
+        log(f"Could not fetch Atheris hooking docs: {e}", level="ERROR")
+        return ""

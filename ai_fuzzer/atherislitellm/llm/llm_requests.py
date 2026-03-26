@@ -7,12 +7,7 @@ from ai_fuzzer.atherislitellm.logger.logs import log
 import litellm
 
 def extract_code_blocks(text):
-    """Extract fenced code blocks from text and return them joined.
-
-    Finds all triple-backtick code fences (optionally with a language
-    tag) and returns their inner contents joined by two newlines. If
-    no code blocks are found, returns an empty string.
-    """
+    """Extract fenced code blocks from text and return them joined."""
     if not text:
         return ""
     pattern = r'```(?:[\w+-]*)\s*\n([\s\S]*?)```'
@@ -33,15 +28,11 @@ def format_prompt(template: str, target_func: str, debug=False) -> str:
     doc_block = f"{fetch_docs.fetch_atheris_readme(debug)}\n\n{fetch_docs.fetch_atheris_hooking_docs(debug)}"
     return template.replace("{{CODE}}", target_func).replace("{{DOCS}}", doc_block)
 
-def get_response(client: dict, prompt_id: str, target_func: str, yaml_path: Path, debug: bool = False, **kwargs) -> str | None:
+def get_response(client: dict, temperature: float, full_prompt: str, debug: bool = False, **kwargs) -> str | None:
     """Prepare a prompt, call LLM via LiteLLM to generate content, and return the text."""
-    log("Preparing prompt and making a LiteLLM call...", debug)
+    log(f"Calling LLM ({client['model']})...", level="DEBUG", debug=debug)
     
     try:
-        temperature, _, template = load_prompt_data(prompt_id, yaml_path, debug)
-        full_prompt = format_prompt(template, target_func, debug)
-
-        # LiteLLM handles retries via num_retries
         response = litellm.completion(
             model=client["model"],
             messages=[{"role": "user", "content": full_prompt}],
@@ -53,9 +44,9 @@ def get_response(client: dict, prompt_id: str, target_func: str, yaml_path: Path
 
         content = getattr(getattr(getattr(response, "choices", [None])[0], "message", None), "content", None)
         if not content:
-            log("Warning: Received empty content from model response.", True)
+            log("Received empty content from model.", level="ERROR")
         return content
 
     except Exception as e:
-        log(f"Error during LLM completion: {e}", True)
+        log(f"LiteLLM error: {e}", level="ERROR")
         return None

@@ -1,50 +1,65 @@
-import os
 import sys
 import traceback
 import inspect
 from pathlib import Path
 from datetime import datetime
 
-_LOG_BASE: Path | None = None
 _LOG_FILE: Path | None = None
 
-def init_logger(base_path: str) -> None:
+def init_logger(output_dir: Path) -> None:
     """Set up the log directory and log file under the given base path."""
-    global _LOG_BASE, _LOG_FILE
-    _LOG_BASE = Path(base_path)
-    log_dir = _LOG_BASE / "logs"
+    global _LOG_FILE
+    log_dir = output_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     _LOG_FILE = log_dir / "log.log"
 
-def log(msg: str, echo: bool = False) -> None:
-    """Write a timestamped debug message to the log file (optionally echo)."""
+def log(msg: str, level: str = "INFO", debug: bool = False) -> None:
+    """Log a message with a level (INFO, DEBUG, ERROR)."""
     if _LOG_FILE is None:
-        raise RuntimeError("Logger not initialized. Call init_logger(path) first.")
+        ts = datetime.now().strftime("%I:%M:%S%p")
+        print(f"[{ts}] [{level}] {msg}")
+        return
 
-    # caller frame
     current = inspect.currentframe()
     frame = current.f_back if current is not None else None
-    if frame is not None:
-        filename = Path(frame.f_code.co_filename).name
-        lineno = frame.f_lineno
-    else:
-        filename = "<unknown>"
-        lineno = 0
+    filename = Path(frame.f_code.co_filename).name if frame else "<unknown>"
+    lineno = frame.f_lineno if frame else 0
 
-    ts = datetime.now().strftime("%m/%d/%y %I:%M:%S%p")
-    line = f"{ts} --- DEBUG --- {filename}:{lineno} - {msg}\n"
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_line = f"[{ts}] [{level}] {filename}:{lineno} - {msg}\n"
 
-    # If called inside an exception handler, append traceback
     exc_type, exc, tb = sys.exc_info()
-    if exc is not None and not isinstance(exc, SyntaxError):
-        line += "".join(traceback.format_exception(exc_type, exc, tb)) + "\n"
+    if exc is not None:
+        log_line += "".join(traceback.format_exception(exc_type, exc, tb)) + "\n"
     
     try:
         with _LOG_FILE.open("a", encoding="utf-8") as f:
-            f.write(line)
-        if echo:
-            sys.stdout.write(line)
-            sys.stdout.flush()
+            f.write(log_line)
+        
+        display_ts = datetime.now().strftime("%I:%M:%S%p")
+        display_msg = f"[{display_ts}] [{level}] {msg}"
+        
+        if level == "ERROR":
+            sys.stderr.write(display_msg + "\n")
+        elif level == "INFO":
+            sys.stdout.write(display_msg + "\n")
+        elif level == "DEBUG" and debug:
+            sys.stdout.write(display_msg + "\n")
+            
     except Exception as e:
-        sys.stderr.write(f"[log_debug ERROR] {e}\n")
-        sys.stderr.flush()
+        sys.stderr.write(f"[Logger Error] {e}\n")
+
+def report_failure(error_msg: str, context: str = "General") -> None:
+    """Write a failure report file in the log directory and log the event."""
+    log(f"FAILURE [{context}]: {error_msg}", level="ERROR")
+    
+    if _LOG_FILE is None:
+        return
+
+    try:
+        report_path = _LOG_FILE.parent / "failure_report.txt"
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(report_path, "a", encoding="utf-8") as f:
+            f.write(f"[{ts}] [{context}]\n{error_msg}\n{'-'*40}\n")
+    except Exception as e:
+        sys.stderr.write(f"[Critical Logger Error] {e}\n")
