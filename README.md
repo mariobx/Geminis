@@ -3,30 +3,80 @@ This project creates a LLM-assisted Python fuzzing harness generator designed to
 
 # Usage:
   atherislitellm \
-    --src-dir /path/to/code \
-    --output-dir /path/to/logs \
+    --url https://github.com/user/repo \
+    --src-dir /home/user/source_code \
+    --output-dir /home/user/output_logs \
     --model google/gemini-1.5-flash \
-    --prompts-path /path/to/prompts.yaml \
+    --prompts-path /home/user/prompts.yaml \
     --prompt base \
-    --api-key your_api_key_here (optional if env var is set) \
+    --api-key your_api_key_here \
+    --extra-model-prompts project=my-project \
+    --workers 4 \
+    --debug \
+    --smell
+
+# Examples:
+  1. **Clone from a URL to default Downloads directory:**
+  atherislitellm \
+    --url https://github.com/user/repo \
+    --output-dir output_logs \
+    --prompts-path prompts.yaml \
+    --prompt base \
+    --model gemini/gemini-1.5-flash \
+    --api-key YOUR_KEY \
+    --workers 4
+
+  2. **Clone from a URL into a specific folder with complexity filtering:**
+  atherislitellm \
+    --url https://github.com/user/repo \
+    --src-dir /home/user/fuzzing_projects \
+    --output-dir output_logs \
+    --prompts-path prompts.yaml \
+    --prompt base \
+    --model openai/gpt-4 \
     --extra-model-prompts project=my-project \
     --debug \
     --smell
 
+  3. **Use a local directory with short-form flags:**
+  atherislitellm \
+    -s /home/user/local_source \
+    -o output_logs \
+    -pp prompts.yaml \
+    -p base \
+    -m gemini/gemini-1.5-flash \
+    -k YOUR_KEY \
+    -w 2
+
+  4. **Run with local Ollama model:**
+  export OLLAMA_API_BASE=http://localhost:11434
+  atherislitellm \
+    -s /home/user/local_source \
+    -o output_logs \
+    -pp prompts.yaml \
+    -p base \
+    -m ollama/codegemma:7b \
+    -d \
+    -sm \
+    -e project=fuzz-test
+
 # Arguments:
-  - `-s`, `--src-dir`: Path to the Python source directory to fuzz.
-  - `-o`, `--output-dir`: Where to store crash logs and generated harnesses.
-  - `-m`, `--model`: LiteLLM model string (e.g., `gemini/gemini-1.5-flash`, `openai/gpt-4`).
-  - `-pp`, `--prompts-path`: Path to `prompts.yaml` config file.
-  - `-p`, `--prompt`: Prompt ID from `prompts.yaml` to use (default: `base`).
-  - `-k`, `--api-key`: API key string (optional if environment variable is set).
-  - `-e`, `--extra-mode-prompts`: Extra vendor-specific parameters as `key=value` pairs.
-  - `-d`, `--debug`: Enable debug/verbose mode.
-  - `-sm`, `--smell`: Enable code smell filtering via Radon.
+  - `-u`, `--url`: Git URL to clone. Defaults to `~/Downloads` if no `--src-dir` is given.
+  - `-s`, `--src-dir`: Path to source directory. If `--url` is provided, it clones into a subdirectory here.
+  - `-o`, `--output-dir`: Destination for generated harnesses and logs.
+  - `-m`, `--model`: LiteLLM model string (e.g. `gemini/gemini-1.5-flash`, `ollama/llama3`).
+  - `-pp`, `--prompts-path`: Path to `prompts.yaml` configuration.
+  - `-p`, `--prompt`: ID of the prompt template to use.
+  - `-k`, `--api-key`: API key string (optional if environment variable exists).
+  - `-e`, `--extra-model-prompts`: Vendor-specific parameters as `key=value` pairs.
+  - `-d`, `--debug`: Enable verbose logging.
+  - `-sm`, `--smell`: Filter out low-maintainability code using Radon.
+  - `-w`, `--workers`: Number of concurrent generation threads.
 
 # Workflow:
-  1. Resolve API key (environment variable or raw string) and verify model via LiteLLM.
-  2. Discover .py files; parse target functions and classes.
-  3. (Optional) Filter by maintainability index using Radon.
-  4. Build prompt with Atheris docs + target code; send to the LLM via LiteLLM.
-  5. Save generated harnesses into a timestamped run directory.
+  1. Resolve API keys and model configurations.
+  2. Clone repository from URL or verify existing local source directory.
+  3. Discover and parse Python files for target functions and classes.
+  4. (Optional) Filter targets by maintainability index using Radon.
+  5. Concurrently generate harnesses via LiteLLM using extracted code context.
+  6. Save and organize all valid harnesses into a structured, timestamped output directory.
