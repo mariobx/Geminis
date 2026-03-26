@@ -1,64 +1,13 @@
 ## AtherisLiteLLM:
-This project creates a LLM-assisted Python fuzzing harness generator designed to leverage large language models via LiteLLM to automatically build fuzzing harnesses for target Python functions and classes. It uses Google’s Atheris fuzzing engine to dynamically generate and test code, with the aim of uncovering bugs or vulnerabilities in software.
+This project creates a LLM-assisted Python fuzzing harness generator designed to leverage large language models via LiteLLM to automatically build fuzzing harnesses for target Python functions and classes. It uses Google’s Atheris fuzzing engine to dynamically generate and test code, with the aim of uncovering bugs or vulnerabilities in software. 
 
-# Usage:
-  atherislitellm \
-    --url https://github.com/user/repo \
-    --src-dir /home/user/source_code \
-    --output-dir /home/user/output_logs \
-    --model google/gemini-1.5-flash \
-    --prompts-path /home/user/prompts.yaml \
-    --prompt base \
-    --api-key your_api_key_here \
-    --extra-model-prompts project=my-project \
-    --workers 4 \
-    --debug \
-    --smell
-
-# Examples:
-  1. **Clone from a URL to default Downloads directory:**
-  atherislitellm \
-    --url https://github.com/user/repo \
-    --output-dir output_logs \
-    --prompts-path prompts.yaml \
-    --prompt base \
-    --model gemini/gemini-1.5-flash \
-    --api-key YOUR_KEY \
-    --workers 4
-
-  2. **Clone from a URL into a specific folder with complexity filtering:**
-  atherislitellm \
-    --url https://github.com/user/repo \
-    --src-dir /home/user/fuzzing_projects \
-    --output-dir output_logs \
-    --prompts-path prompts.yaml \
-    --prompt base \
-    --model openai/gpt-4 \
-    --extra-model-prompts project=my-project \
-    --debug \
-    --smell
-
-  3. **Use a local directory with short-form flags:**
-  atherislitellm \
-    -s /home/user/local_source \
-    -o output_logs \
-    -pp prompts.yaml \
-    -p base \
-    -m gemini/gemini-1.5-flash \
-    -k YOUR_KEY \
-    -w 2
-
-  4. **Run with local Ollama model:**
-  export OLLAMA_API_BASE=http://localhost:11434
-  atherislitellm \
-    -s /home/user/local_source \
-    -o output_logs \
-    -pp prompts.yaml \
-    -p base \
-    -m ollama/codegemma:7b \
-    -d \
-    -sm \
-    -e project=fuzz-test
+# Workflow:
+  1. Resolve API keys and model configurations.
+  2. Clone repository from URL or verify existing local source directory.
+  3. Discover and parse Python files for target functions and classes.
+  4. (Optional) Filter targets by maintainability index using Radon.
+  5. Concurrently generate harnesses via LiteLLM using extracted code context.
+  6. Save and organize all valid harnesses into a structured, timestamped output directory.
 
 # Arguments:
   - `-u`, `--url`: Git URL to clone. Defaults to `~/Downloads` if no `--src-dir` is given.
@@ -73,10 +22,47 @@ This project creates a LLM-assisted Python fuzzing harness generator designed to
   - `-sm`, `--smell`: Filter out low-maintainability code using Radon.
   - `-w`, `--workers`: Number of concurrent generation threads.
 
-# Workflow:
-  1. Resolve API keys and model configurations.
-  2. Clone repository from URL or verify existing local source directory.
-  3. Discover and parse Python files for target functions and classes.
-  4. (Optional) Filter targets by maintainability index using Radon.
-  5. Concurrently generate harnesses via LiteLLM using extracted code context.
-  6. Save and organize all valid harnesses into a structured, timestamped output directory.
+# Examples:
+  1. **Clone from a URL to default Downloads directory:** \
+  atherislitellm \
+    --url https://github.com/user/repo \
+    --output-dir output_logs \
+    --prompts-path prompts.yaml \
+    --prompt base \
+    --model gemini/gemini-1.5-flash \
+    --api-key YOUR_KEY \
+    --workers 4 \
+
+  2. **Clone from a URL into a specific folder with complexity filtering:** \
+  atherislitellm \
+    --url https://github.com/user/repo \
+    --src-dir /home/user/fuzzing_projects \
+    --output-dir output_logs \
+    --prompts-path prompts.yaml \
+    --prompt base \
+    --model openai/gpt-4 \
+    --extra-model-prompts project=my-project \
+    --debug \
+    --smell \
+
+  3. **Use a local directory with short-form flags:** \
+  atherislitellm \
+    -s /home/user/local_source \
+    -o output_logs \
+    -pp prompts.yaml \
+    -p base \
+    -m gemini/gemini-1.5-flash \
+    -k YOUR_KEY \
+    -w 2 \
+
+  4. **Run with local Ollama model:** \
+  export OLLAMA_API_BASE=http://localhost:11434
+  atherislitellm \
+    -s /home/user/local_source \
+    -o output_logs \
+    -pp prompts.yaml \
+    -p base \
+    -m ollama/codegemma:7b \
+    -d \
+    -sm \
+    -e project=fuzz-test \
